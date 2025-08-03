@@ -1,4 +1,6 @@
 import os
+import shutil
+import subprocess
 from dataclasses import dataclass, field
 from typing import List, Optional
 
@@ -257,3 +259,15 @@ class QAPIGoBackend(QAPIBackend):
         template = env.get_template("events.go.jinja2")
         with open(os.path.join(dir, "events.go"), "w") as f:
             f.write(template.render(events=events.values(), pkg=pkg))
+
+        # optionally apply go fmt to all go files in dir if go compiler exists
+        if shutil.which("go") is not None:
+            try:
+                for root, _, files in os.walk(dir):
+                    for f in files:
+                        if f.endswith(".go"):
+                            subprocess.run(
+                                ["go", "fmt", os.path.join(root, f)], check=True
+                            )
+            except subprocess.CalledProcessError as e:
+                print(f"Error running go fmt: {e}")
