@@ -1,3 +1,5 @@
+![Build](https://github.com/q-controller/qapi-client/actions/workflows/build.yml/badge.svg)
+
 # QEMU QAPI Go Client
 
 A type-safe, auto-generated Go client for [QEMU](https://www.qemu.org/)'s [QAPI](https://wiki.qemu.org/Features/QAPI) schema.
