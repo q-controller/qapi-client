@@ -128,6 +128,13 @@ func (s *Session) ReadResponse() ([]string, error) {
 }
 
 // Close stops the session and cleans up
-func (s *Session) Close() {
-	unix.Close(s.fd)
+func (s *Session) Close() error {
+	if err := unix.Shutdown(s.fd, unix.SHUT_RDWR); err != nil {
+		return err
+	}
+
+	if err := unix.Close(s.fd); err != nil {
+		return err
+	}
+	return nil
 }
