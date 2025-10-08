@@ -106,22 +106,14 @@ func (s *Session) ReadResponse() ([]string, error) {
 			return nil, io.EOF
 		}
 	}
-	var jsonStrings []string
-	bufferStr := s.dataBuffer.String()
-	parts := strings.SplitN(bufferStr, "\r\n", -1)
-	for _, part := range parts {
-		if isValidJSON(parts[0]) {
-			msg := strings.TrimSpace(part)
-			if msg != "" {
-				jsonStrings = append(jsonStrings, msg)
-			}
-			s.dataBuffer.Reset()
-		} else {
-			// No more parts, clear buffer
-			s.dataBuffer.Reset()
-			s.dataBuffer.WriteString(part)
-			break
-		}
+
+	// Parse complete JSON objects from the buffer
+	jsonStrings, remaining, _ := parseJSONObjects(s.dataBuffer.String())
+
+	// Reset buffer and store any remaining unparsed data
+	s.dataBuffer.Reset()
+	if remaining != "" {
+		s.dataBuffer.WriteString(remaining)
 	}
 
 	return jsonStrings, readErr
