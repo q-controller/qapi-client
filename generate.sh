@@ -73,6 +73,6 @@ mkdir -p ${OUTDIR}
 
 python3 -m venv ${script_dir}/.venv
 source ${script_dir}/.venv/bin/activate
-pip install jinja2 >/dev/null 2>&1
+python3 -m pip install jinja2 >/dev/null 2>&1
 
 PYTHONPATH=${script_dir}/src/generator python3 ${script_dir}/qemu/scripts/qapi-gen.py -o ${OUTDIR} ${SCHEMA} --backend gobackend.QAPIGoBackend --prefix ${PACKAGE} >/dev/null
