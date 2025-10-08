@@ -70,7 +70,7 @@ func (m *Monitor) Add(name, socketPath string) error {
 }
 
 func (m *Monitor) Do(action Action, payload interface{}) ActionResponse {
-	resp := ActionResponse{}
+	var resp ActionResponse
 	done := make(chan ActionResponse)
 	defer close(done)
 AddLoop:
@@ -157,7 +157,7 @@ func (m *Monitor) Start() <-chan Message {
 									}
 								} else {
 									cmd.Done <- ActionResponse{
-										Error: fmt.Errorf("Check payload for ADD command"),
+										Error: fmt.Errorf("check payload for ADD command"),
 									}
 								}
 							case ActionExecute:
@@ -172,7 +172,7 @@ func (m *Monitor) Start() <-chan Message {
 										cmd.Done <- ActionResponse{Error: nil}
 									}
 								} else {
-									cmd.Done <- ActionResponse{Error: fmt.Errorf("Check payload for EXECUTE command")}
+									cmd.Done <- ActionResponse{Error: fmt.Errorf("check payload for EXECUTE command")}
 								}
 							case ActionClose:
 								errs := []error{}
