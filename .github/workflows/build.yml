@@ -20,3 +20,5 @@ jobs:
         run: git submodule update --init
       - name: Build Example
         run: cd example && make
+      - name: Run Tests
+        run: go test -v ./...
