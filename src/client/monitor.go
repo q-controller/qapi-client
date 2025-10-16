@@ -56,14 +56,13 @@ func NewMonitor() (*Monitor, error) {
 }
 
 func (m *Monitor) Add(name, socketPath string) error {
-	session, sessionErr := NewSession(socketPath, 2*time.Second, 300*time.Second)
-	if sessionErr != nil {
-		return sessionErr
+	if name == "" || socketPath == "" {
+		return fmt.Errorf("empty name or socket path")
 	}
 
 	resp := m.Do(ActionAdd, AddPayload{
-		Session: session,
-		Id:      name,
+		SocketPath: socketPath,
+		Id:         name,
 	})
 
 	return resp.Error
@@ -143,18 +142,24 @@ func (m *Monitor) Start() <-chan Message {
 							switch cmd.Action {
 							case ActionAdd:
 								if payload, payloadOk := cmd.Payload.(AddPayload); payloadOk {
-									if err := m.queue.Add(payload.Session.fd); err != nil {
+									if session, sessionErr := NewSession(payload.SocketPath, 2*time.Second, 300*time.Second); sessionErr != nil {
 										cmd.Done <- ActionResponse{
-											Error: err,
+											Error: sessionErr,
 										}
-										payload.Session.Close()
 									} else {
-										m.dispatchers[payload.Id] = &Dispatcher{
-											Session: payload.Session,
-											Pubsub:  NewPubSub(),
-										}
-										cmd.Done <- ActionResponse{
-											Error: err,
+										if err := m.queue.Add(session.fd); err != nil {
+											cmd.Done <- ActionResponse{
+												Error: err,
+											}
+											session.Close()
+										} else {
+											m.dispatchers[payload.Id] = &Dispatcher{
+												Session: session,
+												Pubsub:  NewPubSub(),
+											}
+											cmd.Done <- ActionResponse{
+												Error: nil,
+											}
 										}
 									}
 								} else {
