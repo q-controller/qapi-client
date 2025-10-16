@@ -1,4 +1,4 @@
-package client
+package sockets
 
 import (
 	"iter"
@@ -6,11 +6,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type Epoll struct {
-	fd int
-}
-
-func (q *Epoll) Wait() (iter.Seq[int], error) {
+func (q *fdQueue) waitInternal() (iter.Seq[int], error) {
 	events := make([]unix.EpollEvent, 10)
 	n, err := unix.EpollWait(q.fd, events, -1) // Block until events occur
 	if err != nil {
@@ -31,11 +27,7 @@ func (q *Epoll) Wait() (iter.Seq[int], error) {
 	}, nil
 }
 
-func (q *Epoll) Close() error {
-	return unix.Close(q.fd)
-}
-
-func (q *Epoll) Add(fd int) error {
+func (q *fdQueue) addInternal(fd int) error {
 	event := unix.EpollEvent{
 		Events: unix.EPOLLIN | unix.EPOLLET,
 		Fd:     int32(fd),
@@ -48,18 +40,10 @@ func (q *Epoll) Add(fd int) error {
 	return nil
 }
 
-func (q *Epoll) Delete(fd int) error {
+func (q *fdQueue) deleteInternal(fd int) error {
 	return unix.EpollCtl(q.fd, unix.EPOLL_CTL_DEL, fd, nil)
 }
 
-func NewEventQueue() (EventQueue, error) {
-	fd, err := unix.EpollCreate1(0)
-
-	if err != nil {
-		return nil, nil
-	}
-
-	return &Epoll{
-		fd: fd,
-	}, nil
+func createQueueFd() (int, error) {
+	return unix.EpollCreate1(0)
 }

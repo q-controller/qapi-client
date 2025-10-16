@@ -1,4 +1,4 @@
-package client
+package utils
 
 import (
 	"reflect"
@@ -80,7 +80,7 @@ func TestParseJSONObjects(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotObjects, gotRemaining, err := parseJSONObjects(tt.input)
+			gotObjects, gotRemaining, err := ParseJSONObjects(tt.input)
 
 			// Check error status
 			if (err != nil) != tt.wantErr {
@@ -160,7 +160,7 @@ func TestParseJSONObjects_WhitespaceVariants(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotObjects, gotRemaining, err := parseJSONObjects(tt.input)
+			gotObjects, gotRemaining, err := ParseJSONObjects(tt.input)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseJSONObjects() error = %v, wantErr %v", err, tt.wantErr)
