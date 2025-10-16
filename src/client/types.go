@@ -73,8 +73,8 @@ const (
 )
 
 type AddPayload struct {
-	Session *Session
-	Id      string
+	SocketPath string
+	Id         string
 }
 
 type ExecutePayload struct {
