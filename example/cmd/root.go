@@ -1,13 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"os"
 	"qga-example/generated/qapi"
-	"time"
 
 	"github.com/q-controller/qapi-client/src/client"
+	"github.com/q-controller/qapi-client/src/monitor"
 	"github.com/spf13/cobra"
 )
 
@@ -35,18 +36,18 @@ var rootCmd = &cobra.Command{
 	Use:   "qga-example",
 	Short: "A brief description of your application",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		monitor, monitorErr := client.NewMonitor()
+		monitor, monitorErr := monitor.NewMonitor()
 		if monitorErr != nil {
 			return monitorErr
 		}
 
 		defer monitor.Close()
-		msgCh := monitor.Start()
+		msgCh := monitor.Messages()
 
 		for {
-			if addErr := monitor.Add("example instance", socketPath); addErr != nil {
-				slog.Error("Could not add instance", "error", addErr)
-				time.Sleep(1 * time.Second)
+			addFut := monitor.Add("example instance", socketPath)
+			if err, ok := <-addFut; !ok || err != nil {
+				slog.Error("Could not add instance", "error", err)
 				continue
 			}
 			break
@@ -66,18 +67,24 @@ var rootCmd = &cobra.Command{
 				if err := json.Unmarshal(msg.Generic, &greeting); err == nil {
 					if req, reqErr := qapi.PrepareQmpCapabilitiesRequest(qapi.QObjQmpCapabilitiesArg{}); reqErr == nil {
 						if ch, chErr := monitor.Execute("example instance", client.Request(*req)); chErr == nil {
-							res := <-ch
-							if res.Raw.Error == nil {
+							res, ok := ch.Get(context.Background(), -1)
+							if !ok {
+								continue
+							}
+							if res.Error == nil {
 								if schemaReq, schemaErr := qapi.PrepareQueryStatusRequest(); schemaErr == nil {
 									if statusCh, statusChErr := monitor.Execute("example instance", client.Request(*schemaReq)); statusChErr == nil {
-										status := <-statusCh
-										if status.Raw.Return != nil {
+										status, ok := statusCh.Get(context.Background(), -1)
+										if !ok {
+											continue
+										}
+										if status.Return != nil {
 											var statusInfo qapi.StatusInfo
-											if unmarshalErr := json.Unmarshal(status.Raw.Return, &statusInfo); unmarshalErr == nil {
+											if unmarshalErr := json.Unmarshal(status.Return, &statusInfo); unmarshalErr == nil {
 												slog.Info("Retrieved status of the instance", "status", statusInfo.Status)
 												if shReq, shReqErr := qapi.PrepareSystemPowerdownRequest(); shReqErr == nil {
 													if shutdownCh, shutdownChErr := monitor.Execute("example instance", client.Request(*shReq)); shutdownChErr == nil {
-														<-shutdownCh
+														_, _ = shutdownCh.Get(context.Background(), -1)
 														slog.Info("Shutdown command sent to the instance")
 													} else {
 														slog.Error("Failed to send shutdown command", "error", shutdownChErr)

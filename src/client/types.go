@@ -1,89 +1,56 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"iter"
 )
 
-type Null struct{}
-type QEmpty struct{}
-
-type Error struct {
-	Class       string `json:"class"`
-	Description string `json:"desc"`
+type Request struct {
+	Id        string          `json:"id,omitempty"`
+	Execute   string          `json:"execute"`
+	Arguments json.RawMessage `json:"arguments,omitempty"`
 }
 
-type QAPIEvent struct {
-	Event     string          `json:"event,omitempty"`
-	Data      json.RawMessage `json:"data"`
-	Timestamp *struct {
-		Seconds      int64 `json:"seconds"`
-		Microseconds int64 `json:"microseconds"`
-	} `json:"timestamp"`
+type Event struct {
+	Id     string
+	Data   []string
+	Error  error
+	Action *Action
 }
 
-type QAPIResult struct {
-	Id     string          `json:"id,omitempty"`
-	Error  *Error          `json:"error,omitempty"`
-	Return json.RawMessage `json:"return,omitempty"`
-}
-
-type RawResponse struct {
-	QAPIResult
-	QAPIEvent
-}
-
-type Response[T any] struct {
-	Id     string `json:"id,omitempty"`
-	Error  string `json:"error,omitempty"`
-	Return T      `json:"return,omitempty"`
-}
-
-type MessageType int
-
-const (
-	MessageGeneric MessageType = iota
-	MessageEvent
-)
-
-type Message struct {
-	Type     MessageType
-	Instance string
-	Event    *QAPIEvent
-	Generic  []byte
-}
-
-type EventQueue interface {
-	Wait() (iter.Seq[int], error)
-	Close() error
-	Add(fd int) error
-	Delete(fd int) error
-}
-
-type ActionResponse struct {
-	Error   error
-	Payload interface{}
-}
 type Action int
 
 const (
 	ActionAdd Action = iota
+	ActionCancel
 	ActionClose
 	ActionExecute
 )
 
-type AddPayload struct {
+type CommunicationType int
+
+const (
+	UnixDomain CommunicationType = iota
+	Pipe
+)
+
+type UnixDomainConfig struct {
 	SocketPath string
-	Id         string
 }
 
-type ExecutePayload struct {
-	Id      string
-	Request Request
+type CommunicationConfig struct {
+	Type       CommunicationType `json:"type"`
+	UnixDomain *UnixDomainConfig `json:"unix_domain,omitempty"`
 }
 
-type Command struct {
-	Action  Action
-	Payload interface{}
-	Done    chan<- ActionResponse
+var ErrUnknownCommunicationType = fmt.Errorf("unknown communication type")
+
+type EventQueue interface {
+	Wait(context context.Context) (iter.Seq[*Event], error)
+	Add(id string, config CommunicationConfig) error
+	Execute(id string, request Request) error
+	Cancel(requestId string) error
+	Close() error
 }

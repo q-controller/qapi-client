@@ -1,4 +1,4 @@
-package client
+package sockets
 
 import (
 	"fmt"
@@ -7,11 +7,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type Kqueue struct {
-	fd int
-}
-
-func (q *Kqueue) Wait() (iter.Seq[int], error) {
+func (q *fdQueue) waitInternal() (iter.Seq[int], error) {
 	events := make([]unix.Kevent_t, 10)
 	n, err := unix.Kevent(q.fd, nil, events, nil) // Block until events occur
 	if err != nil {
@@ -31,11 +27,7 @@ func (q *Kqueue) Wait() (iter.Seq[int], error) {
 	}, nil
 }
 
-func (q *Kqueue) Close() error {
-	return unix.Close(q.fd)
-}
-
-func (q *Kqueue) Add(fd int) error {
+func (q *fdQueue) addInternal(fd int) error {
 	event := unix.Kevent_t{
 		Ident:  uint64(fd),
 		Filter: unix.EVFILT_READ,
@@ -49,7 +41,7 @@ func (q *Kqueue) Add(fd int) error {
 	return nil
 }
 
-func (q *Kqueue) Delete(fd int) error {
+func (q *fdQueue) deleteInternal(fd int) error {
 	event := unix.Kevent_t{
 		Ident:  uint64(fd),
 		Filter: unix.EVFILT_READ,
@@ -59,14 +51,6 @@ func (q *Kqueue) Delete(fd int) error {
 	return err
 }
 
-func NewEventQueue() (EventQueue, error) {
-	fd, err := unix.Kqueue()
-
-	if err != nil {
-		return nil, nil
-	}
-
-	return &Kqueue{
-		fd: fd,
-	}, nil
+func createQueueFd() (int, error) {
+	return unix.Kqueue()
 }

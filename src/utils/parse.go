@@ -1,4 +1,4 @@
-package client
+package utils
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 // 1. A slice of complete JSON objects
 // 2. Any remaining unparsed data
 // 3. An error if there was a problem parsing
-func parseJSONObjects(input string) ([]string, string, error) {
+func ParseJSONObjects(input string) ([]string, string, error) {
 	jsonObjects := []string{}
 
 	// Handle empty or whitespace-only input
