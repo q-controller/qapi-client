@@ -109,6 +109,8 @@ func (m *Monitor) Execute(name string, request Request) (<-chan Result, error) {
 func (m *Monitor) Start() <-chan Message {
 	eventCh := make(chan Message)
 	go func() {
+		defer close(m.cmdCh)
+		defer close(eventCh)
 	MainLoop:
 		for {
 			events, err := m.queue.Wait() // Block until events occur
@@ -183,9 +185,6 @@ func (m *Monitor) Start() <-chan Message {
 								if closeErr := m.queue.Close(); closeErr != nil {
 									errs = append(errs, closeErr)
 								}
-
-								close(eventCh)
-								close(m.cmdCh)
 
 								m.readEnd.Close()
 								m.writeEnd.Close()
