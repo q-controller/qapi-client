@@ -156,7 +156,13 @@ func NewAsyncQueue() (client.EventQueue, error) {
 					if comm, commOk := q.instances[id]; commOk {
 						objects, objectsErr := comm.Read()
 						if objectsErr != nil {
-							slog.Error("could not read event data", "instance", id, "error", objectsErr)
+							slog.Info("connection closed or read failed, removing instance", "instance", id, "error", objectsErr)
+							if delErr := queue.Delete(fd); delErr != nil {
+								slog.Error("could not remove fd from queue", "fd", fd, "error", delErr)
+							}
+							comm.Close()
+							delete(q.instances, id)
+							delete(q.fd2Id, fd)
 							continue
 						}
 						for _, object := range objects {
