@@ -152,7 +152,7 @@ func NewAsyncQueue() (client.EventQueue, error) {
 
 			for fd := range fds {
 				if id, idOk := q.fd2Id[fd]; idOk {
-					slog.Info("new event arrived", "instance", id)
+					slog.Debug("new event arrived", "instance", id)
 					if comm, commOk := q.instances[id]; commOk {
 						objects, objectsErr := comm.Read()
 						if objectsErr != nil {
