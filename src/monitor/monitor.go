@@ -23,10 +23,10 @@ type AddRequestResult struct {
 type Monitor struct {
 	queue client.EventQueue
 
-	messagesCh  chan Message
-	addLoop     *client.Dispatcher[error]
-	requestLoop *client.Dispatcher[client.QAPIResult]
-	stopCh      chan struct{}
+	messagesCh chan Message
+	addLoop    *client.Dispatcher[error]
+	executor   *client.Executor
+	stopCh     chan struct{}
 }
 
 func NewMonitor() (*Monitor, error) {
@@ -37,7 +37,7 @@ func NewMonitor() (*Monitor, error) {
 
 	messagesCh := make(chan Message)
 	addLoop := client.NewDispatcher[error](0)
-	requestLoop := client.NewDispatcher[client.QAPIResult](0)
+	executor := client.NewExecutor()
 	stopCh := make(chan struct{})
 
 	go func() {
@@ -56,6 +56,16 @@ func NewMonitor() (*Monitor, error) {
 						})
 					}
 				} else {
+					if event.Error != nil {
+						msg := Message{
+							Instance: event.Id,
+							Type:     MessageGeneric,
+							Generic:  nil,
+						}
+						messagesCh <- msg
+						executor.Cancel(event.Id)
+						continue
+					}
 					for _, data := range event.Data {
 						var env client.RawResponse
 						if err := json.Unmarshal([]byte(data), &env); err != nil {
@@ -85,10 +95,7 @@ func NewMonitor() (*Monitor, error) {
 								fmt.Printf("Failed to decode QAPIResult: %v\n", err)
 								break
 							}
-							requestLoop.Post(client.Data[client.QAPIResult]{
-								Id:      result.Id,
-								Payload: result,
-							})
+							executor.Complete(result.Id, result)
 						default:
 							msg.Type = MessageGeneric
 							msg.Generic = []byte(data)
@@ -105,18 +112,18 @@ func NewMonitor() (*Monitor, error) {
 
 	go func() {
 		addLoopCancel, _ := addLoop.Run(context.Background())
-		requestCancel, _ := requestLoop.Run(context.Background())
+		requestCancel := executor.Run(context.Background())
 		defer requestCancel()
 		defer addLoopCancel()
 		<-stopCh
 	}()
 
 	return &Monitor{
-		queue:       queue,
-		messagesCh:  messagesCh,
-		stopCh:      stopCh,
-		addLoop:     addLoop,
-		requestLoop: requestLoop,
+		queue:      queue,
+		messagesCh: messagesCh,
+		stopCh:     stopCh,
+		addLoop:    addLoop,
+		executor:   executor,
 	}, nil
 }
 
@@ -151,7 +158,7 @@ func (m *Monitor) Close() error {
 }
 
 func (m *Monitor) Execute(name string, request client.Request) (*ExecuteResult, error) {
-	ch := m.requestLoop.Enqueue(request.Id)
+	ch := m.executor.Enqueue(name, request.Id)
 
 	return &ExecuteResult{
 		resultCh: ch,
