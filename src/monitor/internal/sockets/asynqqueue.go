@@ -163,6 +163,11 @@ func NewAsyncQueue() (client.EventQueue, error) {
 							comm.Close()
 							delete(q.instances, id)
 							delete(q.fd2Id, fd)
+							q.eventsCh <- &client.Event{
+								Id:    id,
+								Error: objectsErr,
+								Data:  nil,
+							}
 							continue
 						}
 						for _, object := range objects {
@@ -202,7 +207,10 @@ func NewAsyncQueue() (client.EventQueue, error) {
 												slog.Error("could not marshal execute request", "error", bytesErr)
 												continue
 											}
-											comm.Write(bytes)
+											writeErr := comm.Write(bytes)
+											if writeErr != nil {
+												slog.Error("could not write execute request", "error", writeErr)
+											}
 										}
 									} else {
 										slog.Error("missing execute config for EXECUTE action")
