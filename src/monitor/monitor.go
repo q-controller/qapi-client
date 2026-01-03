@@ -23,7 +23,7 @@ type AddRequestResult struct {
 type Monitor struct {
 	queue client.EventQueue
 
-	messagesCh chan Message
+	messagesCh chan MonitorEvent
 	addLoop    *client.Dispatcher[error]
 	executor   *client.Executor
 	stopCh     chan struct{}
@@ -35,7 +35,7 @@ func NewMonitor() (*Monitor, error) {
 		return nil, queueErr
 	}
 
-	messagesCh := make(chan Message)
+	messagesCh := make(chan MonitorEvent, 100)
 	addLoop := client.NewDispatcher[error](0)
 	executor := client.NewExecutor()
 	stopCh := make(chan struct{})
@@ -54,6 +54,18 @@ func NewMonitor() (*Monitor, error) {
 							Id:      event.Id,
 							Payload: event.Error,
 						})
+						var messageType InstanceMessageType
+						if event.Error == nil {
+							messageType = InstanceMessageAdd
+						} else {
+							messageType = InstanceMessageDelete
+						}
+						messagesCh <- MonitorEvent{
+							InstanceMessage: &InstanceMessage{
+								Instance:            event.Id,
+								InstanceMessageType: messageType,
+							},
+						}
 					}
 				} else {
 					if event.Error != nil {
@@ -62,7 +74,9 @@ func NewMonitor() (*Monitor, error) {
 							Type:     MessageGeneric,
 							Generic:  nil,
 						}
-						messagesCh <- msg
+						messagesCh <- MonitorEvent{
+							Message: &msg,
+						}
 						executor.Cancel(event.Id)
 						continue
 					}
@@ -86,7 +100,9 @@ func NewMonitor() (*Monitor, error) {
 							}
 							msg.Event = &event
 							select {
-							case messagesCh <- msg:
+							case messagesCh <- MonitorEvent{
+								Message: &msg,
+							}:
 							default:
 							}
 						case env.Return != nil:
@@ -96,11 +112,20 @@ func NewMonitor() (*Monitor, error) {
 								break
 							}
 							executor.Complete(result.Id, result)
+							msg.Generic = []byte(data)
+							select {
+							case messagesCh <- MonitorEvent{
+								Message: &msg,
+							}:
+							default:
+							}
 						default:
 							msg.Type = MessageGeneric
 							msg.Generic = []byte(data)
 							select {
-							case messagesCh <- msg:
+							case messagesCh <- MonitorEvent{
+								Message: &msg,
+							}:
 							default:
 							}
 						}
@@ -166,6 +191,6 @@ func (m *Monitor) Execute(name string, request client.Request) (*ExecuteResult, 
 	}, m.queue.Execute(name, request)
 }
 
-func (m *Monitor) Messages() <-chan Message {
+func (m *Monitor) Messages() <-chan MonitorEvent {
 	return m.messagesCh
 }
