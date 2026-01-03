@@ -3,7 +3,6 @@ package monitor
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 
 	"github.com/q-controller/qapi-client/src/client"
@@ -83,7 +82,7 @@ func NewMonitor() (*Monitor, error) {
 					for _, data := range event.Data {
 						var env client.RawResponse
 						if err := json.Unmarshal([]byte(data), &env); err != nil {
-							fmt.Printf("Failed to decode response: %v\n", err)
+							slog.Error("Failed to decode response", "error", err)
 							continue
 						}
 
@@ -95,7 +94,7 @@ func NewMonitor() (*Monitor, error) {
 							msg.Type = MessageEvent
 							var event client.QAPIEvent
 							if err := json.Unmarshal([]byte(data), &event); err != nil {
-								fmt.Printf("Failed to decode QAPIEvent: %v\n", err)
+								slog.Error("Failed to decode QAPIEvent", "error", err)
 								break
 							}
 							msg.Event = &event
@@ -108,7 +107,7 @@ func NewMonitor() (*Monitor, error) {
 						case env.Return != nil:
 							var result client.QAPIResult
 							if err := json.Unmarshal([]byte(data), &result); err != nil {
-								fmt.Printf("Failed to decode QAPIResult: %v\n", err)
+								slog.Error("Failed to decode QAPIResult", "error", err)
 								break
 							}
 							executor.Complete(result.Id, result)
