@@ -54,7 +54,11 @@ var rootCmd = &cobra.Command{
 		}
 
 		ep := ShutdownProcessor{}
-		for msg := range msgCh {
+		for data := range msgCh {
+			msg := data.Message
+			if msg == nil {
+				continue
+			}
 			if msg.Event != nil {
 				qapi.ProcessEvent(&ep, msg.Event.Event, msg.Event.Data)
 				if ep.shutdown {
