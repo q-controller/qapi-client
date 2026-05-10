@@ -12,13 +12,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25.5'
-      - name: Update submodules
-        run: git submodule update --init
+          go-version: '1.25.10'
       - name: Build Example
         run: cd example && make
       - name: Run Tests
-        run: go test -v ./...
+        run: go test -v ./src/...
