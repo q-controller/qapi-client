@@ -104,7 +104,7 @@ func NewMonitor() (*Monitor, error) {
 							}:
 							default:
 							}
-						case env.Return != nil:
+						case env.Return != nil || env.Error != nil:
 							var result client.QAPIResult
 							if err := json.Unmarshal([]byte(data), &result); err != nil {
 								slog.Error("Failed to decode QAPIResult", "error", err)
