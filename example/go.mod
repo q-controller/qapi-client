@@ -1,6 +1,6 @@
 module qga-example
 
-go 1.25.11
+go 1.25.14
 
 replace github.com/q-controller/qapi-client v0.0.0 => ../
 
