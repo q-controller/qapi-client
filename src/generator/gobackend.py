@@ -242,6 +242,9 @@ class QAPIGoBackend(QAPIBackend):
         with open(os.path.join(dir, "events.go"), "w") as f:
             f.write(template.render(events=events.values(), pkg=pkg))
 
+        with open(os.path.join(dir, "methods.go"), "w") as f:
+            f.write(env.get_template("methods.go.jinja2").render(modules=vis.registry.modules, pkg=pkg))
+
         # optionally apply go fmt to all go files in dir if go compiler exists
         if shutil.which("go") is not None:
             try:

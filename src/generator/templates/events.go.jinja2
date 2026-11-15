@@ -8,6 +8,18 @@ import (
 {{'\t' }}"log/slog"
 )
 
+{% for event in events -%}
+{% set arg = "arg " + capitalize(to_go_camel_case(event.arg)) if event.arg else "" -%}
+func Prepare{{ to_go_camel_case(event.name) }}Event({{ arg }}) (string, json.RawMessage) {
+{% if event.arg -%}
+{{ '\t' }}res, _ := json.Marshal(arg)
+{{ '\t' }}return "{{ event.name }}", res
+{%- else -%}
+{{ '\t' }}return "{{ event.name }}", nil
+{%- endif %}
+}
+{% endfor %}
+
 type EventProcessor interface {
 {% for event in events -%}
 {% set arg = "arg " + capitalize(to_go_camel_case(event.arg)) if event.arg else "" -%}
