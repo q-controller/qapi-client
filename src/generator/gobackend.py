@@ -78,28 +78,10 @@ class Registry:
 
 class QAPIGoVisitor(QAPISchemaVisitor):
     registry: Registry
-    visited: set[str]
 
     def __init__(self):
         super().__init__()
         self.registry = Registry()
-        self.visited = set()
-
-    def visit_include(self, name: str, info: Optional[QAPISourceInfo]) -> None:
-        if info:
-            path = os.path.join(os.path.dirname(info.fname), name)
-            if not path in self.visited:
-                self.visited.add(path)
-                try:
-                    visitor = QAPIGoVisitor()
-                    schema = QAPISchema(path)
-                    schema.visit(visitor=visitor)
-                    modules = set(map(lambda e: e.name, self.registry.modules))
-                    for module in visitor.registry.modules:
-                        if not module.name in modules:
-                            self.registry.modules.insert(0, module)
-                except QAPISemError as exc:
-                    print(exc)
 
     def visit_module(self, name: str) -> None:
         self.registry.modules.append(Module(name=name))
