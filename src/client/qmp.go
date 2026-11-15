@@ -10,13 +10,14 @@ type Error struct {
 	Description string `json:"desc"`
 }
 
+type Timestamp struct {
+	Seconds      int64 `json:"seconds"`
+	Microseconds int64 `json:"microseconds"`
+}
 type QAPIEvent struct {
 	Event     string          `json:"event,omitempty"`
 	Data      json.RawMessage `json:"data"`
-	Timestamp *struct {
-		Seconds      int64 `json:"seconds"`
-		Microseconds int64 `json:"microseconds"`
-	} `json:"timestamp"`
+	Timestamp *Timestamp      `json:"timestamp"`
 }
 
 type QAPIResult struct {
